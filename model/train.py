@@ -1,101 +1,90 @@
+# train.py - SCRIPT ACTUALIZADO PARA CLASIFICACIÓN
+
 import pandas as pd
 import numpy as np
-import xgboost as xgb  # <--- Importamos XGBoost
+import xgboost as xgb
+import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, classification_report, ConfusionMatrixDisplay
+from sklearn.utils.class_weight import compute_sample_weight
 
-# --- 1. Carga de Datos Mejorados ---
-
-# Cargamos el nuevo dataframe con todas las características
-# Este archivo ahora contiene los features, el target y las columnas 'mid' para evaluación
-df = pd.read_parquet("model/train_data_ml_enhanced.parquet")
+# --- 1. Carga de Datos ---
+df = pd.read_parquet("model/train_data_ml_classification_1min.parquet")
 
 # --- 2. Definición de Features y Target ---
-
-# El target es el cambio de precio que ya calculamos
-y = df['target_price_change']
-
-# Los features son todas las demás columnas, excepto las relacionadas con el target y el precio
-X = df.drop(columns=['target_price_change', 'mid', 'mid_future'])
-
+y = df['target_direction']
+X = df.drop(columns=['target_direction'])
 print(f"Entrenando con {len(X.columns)} features.")
 
-# División temporal, crucial como siempre
+# División temporal
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, shuffle=False)
 
-# --- 3. Entrenamiento del Modelo XGBoost ---
+# --- 3. Entrenamiento del Modelo XGBoost Classifier ---
 
-# Definimos el modelo XGBoost con algunos parámetros iniciales razonables
-# A diferencia de RandomForest, XGBoost no necesita un Pipeline con StandardScaler
-xgb_regressor = xgb.XGBRegressor(
-    objective='reg:squarederror',  # Objetivo de la regresión
-    n_estimators=1000,             # Número de árboles (iteraciones de boosting)
-    learning_rate=0.05,            # Tasa de aprendizaje, un valor bajo es más robusto
-    max_depth=5,                   # Profundidad máxima de los árboles para evitar sobreajuste
-    subsample=0.8,                 # Proporción de muestras de entrenamiento a usar por árbol
-    colsample_bytree=0.8,          # Proporción de features a usar por árbol
-    random_state=42,               # Para reproducibilidad
-    n_jobs=-1,                     # Usa todos los cores de la CPU
-    early_stopping_rounds=50       # ¡MUY ÚTIL! Detiene el entrenamiento si el modelo no mejora
+# ¡CAMBIO DE MODELO! Usamos XGBClassifier
+xgb_classifier = xgb.XGBClassifier(
+    objective='multi:softmax',
+    num_class=3,
+    n_estimators=1000,
+    learning_rate=0.05,
+    max_depth=5,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42,
+    n_jobs=-1,
+    early_stopping_rounds=50,
+    eval_metric='mlogloss'
 )
+print("\nEntrenando modelo XGBoost para CLASIFICACIÓN con PONDERACIÓN DE CLASES...")
 
-print("\nEntrenando modelo XGBoost...")
+# ¡NUEVO! Calculamos los pesos para las muestras de entrenamiento
+# Esto le dará más importancia a las clases minoritarias
 
-# Para usar early_stopping, necesitamos un conjunto de evaluación
-# Usaremos una porción del final del set de entrenamiento para esto
+
 X_train_part, X_val, y_train_part, y_val = train_test_split(X_train, y_train, test_size=0.1, shuffle=False)
 
-xgb_regressor.fit(
+sample_weights = compute_sample_weight(
+    class_weight='balanced',
+    y=y_train_part
+)
+
+# Usamos 'mlogloss' como métrica de evaluación para clasificación
+xgb_classifier.fit(
     X_train_part, y_train_part,
+    sample_weight=sample_weights,
     eval_set=[(X_val, y_val)],
-    verbose=False  # Ponlo en True si quieres ver el progreso del entrenamiento
+    verbose=False
 )
 
 print("Entrenamiento completado.")
+y_pred = xgb_classifier.predict(X_test)
 
-# El modelo predice el CAMBIO de precio (delta)
-predicted_delta = xgb_regressor.predict(X_test)
+# --- 4. Evaluación del Modelo de Clasificación ---
 
-# --- 4. Evaluación del Modelo ---
+# a) Baseline: Predecir siempre la clase más frecuente
+baseline_prediction = y_train.mode()[0]
+baseline_accuracy = accuracy_score(y_test, np.full_like(y_test, fill_value=baseline_prediction))
+print("\n--- Resultados del Modelo Baseline (Clase más frecuente) ---")
+print(f"Clase más frecuente: {baseline_prediction} (0:Baja, 1:Estable, 2:Sube)")
+print(f"Accuracy Baseline: {baseline_accuracy:.4f}")
 
-# Para la evaluación, necesitamos los precios reales del conjunto de prueba
-mid_actual_test = df.loc[X_test.index, "mid"]
-mid_true_future = df.loc[X_test.index, "mid_future"]
-
-# Reconstruimos la predicción del precio final
-y_pred_xgb = mid_actual_test + predicted_delta
-
-# 1. Evaluación del modelo XGBoost
-mse_xgb = mean_squared_error(mid_true_future, y_pred_xgb)
-rmse_xgb = np.sqrt(mse_xgb)
-r2_xgb = r2_score(mid_true_future, y_pred_xgb)
-
+# b) Modelo XGBoost
+accuracy_xgb = accuracy_score(y_test, y_pred)
 print("\n--- Resultados del Modelo XGBoost ---")
-print(f"RMSE: {rmse_xgb}")
-print(f"R²: {r2_xgb}")
+print(f"Accuracy: {accuracy_xgb:.4f}")
 
-# 2. Evaluación del modelo de Baseline (Persistencia)
-y_pred_baseline = mid_actual_test  # La predicción es simplemente el precio actual
-mse_baseline = mean_squared_error(mid_true_future, y_pred_baseline)
-rmse_baseline = np.sqrt(mse_baseline)
-r2_baseline = r2_score(mid_true_future, y_pred_baseline)
+# c) Reporte detallado y Matriz de Confusión
+print("\nReporte de Clasificación:")
+print(classification_report(y_test, y_pred, target_names=['Baja (0)', 'Estable (1)', 'Sube (2)']))
 
-print("\n--- Resultados del Modelo Baseline (Ingenuo) ---")
-print(f"RMSE Baseline: {rmse_baseline}")
-print(f"R² Baseline: {r2_baseline}")
+print("Matriz de Confusión:")
+ConfusionMatrixDisplay.from_predictions(y_test, y_pred, display_labels=['Baja', 'Estable', 'Sube'], cmap='Blues')
+plt.show()
 
-# --- 5. Análisis Detallado ---
-
-# Comparamos el rendimiento relativo
-improvement_rmse = (rmse_baseline - rmse_xgb) / rmse_baseline
-print(f"\nMejora sobre el baseline (RMSE): {improvement_rmse:.4%}")
-
-print("\n--- Comparación de Predicciones (últimas 30) ---")
+# --- 5. Análisis Detallado de Predicciones ---
 df_eval = pd.DataFrame({
-    "mid_actual": mid_actual_test,
-    "mid_true": mid_true_future,
-    "mid_pred_XGB": y_pred_xgb,
-    "mid_pred_baseline": y_pred_baseline
+    'direction_true': y_test,
+    'direction_pred': y_pred
 }, index=X_test.index)
-
+print("\n--- Comparación de Predicciones (últimas 30) ---")
 print(df_eval.tail(30))
