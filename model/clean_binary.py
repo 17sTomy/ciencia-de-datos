@@ -13,7 +13,7 @@ df["datetime"] = df["DATE"] + pd.to_timedelta(df["time_secs"], unit="s")
 df = df.set_index("datetime").sort_index()
 
 agg_rules = {'Bid': ['first', 'max', 'min', 'last'], 'Ask': ['first', 'max', 'min', 'last'], 'BidQty': 'sum', 'AskQty': 'sum', 'NUMEX': 'mean'}
-df_resampled = df.resample('1T').agg(agg_rules)
+df_resampled = df.resample('1min').agg(agg_rules)
 df_resampled.columns = ['_'.join(col).strip() for col in df_resampled.columns.values]
 df_resampled.dropna(inplace=True)
 

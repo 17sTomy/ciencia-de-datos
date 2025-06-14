@@ -92,7 +92,7 @@ print("\nReporte de Clasificación:")
 print(classification_report(y_test, y_pred, target_names=['Baja (0)', 'Sube (1)']))
 
 
-model_filename = 'model\models\xgb_model.joblib'
+model_filename = 'model/models/xgb_model.joblib'
 print(f"\nGuardando el mejor modelo en '{model_filename}'...")
 joblib.dump(best_model, model_filename)
 print("Modelo guardado exitosamente.")
