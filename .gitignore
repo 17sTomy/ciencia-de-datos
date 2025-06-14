@@ -1,3 +1,4 @@
 .venv
 *.sas7bdat
 *.parquet
+*__pycache__
