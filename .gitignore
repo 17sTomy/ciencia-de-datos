@@ -2,3 +2,4 @@
 *.sas7bdat
 *.parquet
 *__pycache__
+*.joblib
