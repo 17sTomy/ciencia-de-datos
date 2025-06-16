@@ -7,3 +7,4 @@ class PricePredictionResponse(BaseModel):
     earnings: float
     operations: int
     accuracy: float
+    timestamp: str

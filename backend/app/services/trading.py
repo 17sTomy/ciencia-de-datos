@@ -48,6 +48,7 @@ def simulate_trading(
             "accuracy": accuracy,
             "capital": capital,
             "operations": operations,
+            "timestamp": str(row.name),
         })
         results.append(row_data)
 
