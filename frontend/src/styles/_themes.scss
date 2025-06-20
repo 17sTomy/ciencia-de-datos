@@ -1,0 +1,43 @@
+@import 'variables';
+
+.light-theme {
+  $primary-color: #3498db;
+  $background-color: #f4f7f9;
+  $text-color: #2c3e50;
+  $text-color-secondary: #7f8c8d;
+  $card-background: #ffffff;
+  $border-color: #e0e0e0;
+
+  --primary-color: #{$primary-color};
+  --background-color: #{$background-color};
+  --text-color: #{$text-color};
+  --text-color-secondary: #{$text-color-secondary};
+  --card-background: #{$card-background};
+  --border-color: #{$border-color};
+  --color-buy: #27ae60;
+  --color-buy-text: #ffffff;
+  --color-sell: #c0392b;
+  --color-sell-text: #ffffff;
+  --operations-color: #222;
+}
+
+.dark-theme {
+  $primary-color: #3498db;
+  $background-color: #232b36;
+  $text-color: #ecf0f1;
+  $text-color-secondary: #95a5a6;
+  $card-background: #283344;
+  $border-color: #3e4a5f;
+
+  --primary-color: #{$primary-color};
+  --background-color: #{$background-color};
+  --text-color: #{$text-color};
+  --text-color-secondary: #{$text-color-secondary};
+  --card-background: #{$card-background};
+  --border-color: #{$border-color};
+  --color-buy: #2ecc71;
+  --color-buy-text: #1c2532;
+  --color-sell: #e74c3c;
+  --color-sell-text: #1c2532;
+  --operations-color: #fff;
+} 
