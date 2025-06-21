@@ -5,7 +5,7 @@ def simulate_trading(
         model, 
         initial_capital=10000.0, 
         trade_quantity=100, 
-        commission_rate=0.001, 
+        commission_rate=0.0000001, 
         prediction_horizon=10
     ) -> pd.DataFrame:
     
