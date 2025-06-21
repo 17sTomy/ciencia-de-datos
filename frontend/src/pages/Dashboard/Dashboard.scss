@@ -1,0 +1,233 @@
+@import '../../styles/variables';
+
+.dashboard {
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+
+  &__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+  }
+
+  &__company-info {
+    min-width: 0;
+  }
+
+  &__header-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    min-width: 0;
+  }
+
+  &__datetime {
+    text-align: right;
+    min-width: 120px;
+  }
+
+  &__symbol {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.2rem;
+    color: var(--text-color);
+    word-break: break-word;
+  }
+
+  &__company {
+    font-size: 1.2rem;
+    color: var(--text-color-secondary);
+    word-break: break-word;
+  }
+
+  &__main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__chart-section {
+    background: var(--card-background);
+    border-radius: $border-radius;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    min-height: 350px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  
+  &__chart-placeholder {
+    color: var(--text-color-secondary);
+  }
+
+  &__info-panels {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+  }
+
+  &__panel {
+    background: var(--card-background);
+    border-radius: $border-radius;
+    padding: 1.5rem;
+    text-align: center;
+    min-width: 0;
+    
+    &-label {
+      font-size: 1rem;
+      color: var(--text-color-secondary);
+      margin-bottom: 0.5rem;
+    }
+    &-value {
+      font-size: 2.2rem;
+      font-weight: bold;
+      word-break: break-word;
+    }
+  }
+
+  &__summary-panels {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
+
+  &__summary {
+    background: var(--card-background);
+    border-radius: $border-radius;
+    padding: 1.5rem;
+    text-align: center;
+    min-width: 0;
+
+    &-label {
+      font-size: 1rem;
+      color: var(--text-color-secondary);
+      margin-bottom: 0.5rem;
+    }
+    &-value {
+      font-size: 2.2rem;
+      font-weight: bold;
+      word-break: break-word;
+    }
+  }
+
+  .dashboard__panel-value.bid, .dashboard__summary-value.profits, .dashboard__signal.buy {
+    color: $color-green;
+  }
+  .dashboard__panel-value.ask, .dashboard__signal.sell {
+    color: $color-red;
+  }
+  .dashboard__panel-value.mid {
+    color: $color-yellow;
+  }
+  .dashboard__summary-value.accuracy {
+    color: $color-blue;
+  }
+  
+  &__signal {
+    font-size: 2.5rem;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+  }
+
+  .dashboard__summary-value.operations {
+    color: var(--operations-color, #222);
+  }
+
+  .light-theme .dashboard__summary-value.operations {
+    --operations-color: #222;
+  }
+
+  .dark-theme .dashboard__summary-value.operations {
+    --operations-color: #fff;
+  }
+
+  // --- Responsive ---
+  @media (max-width: 1100px) {
+    &__summary-panels {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+  }
+
+  @media (max-width: 900px) {
+    padding: 1rem;
+
+    &__header {
+      align-items: center;
+      gap: 1rem;
+    }
+
+    &__header-right {
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    &__main {
+      padding: 0;
+    }
+
+    &__chart-section {
+      padding: 0.5rem;
+      min-height: 250px;
+    }
+
+    &__info-panels {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.5rem;
+    }
+
+    &__summary-panels {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+    &__panel, &__summary {
+      padding: 1rem;
+    }
+    &__panel-value, &__summary-value {
+      font-size: 1.5rem;
+    }
+    &__signal {
+      font-size: 2rem;
+    }
+  }
+
+  @media (max-width: 600px) {
+    padding: 0.75rem;
+    &__header {
+      margin-bottom: 1rem;
+    }
+
+    &__company {
+      font-size: 0.9rem;
+    }
+
+    &__chart-section {
+      min-height: 220px;
+    }
+    
+    &__panel, &__summary {
+      padding: 0.75rem;
+    }
+    &__panel-label, &__summary-label {
+      font-size: 0.8rem;
+    }
+    &__panel-value, &__summary-value {
+      font-size: 1.2rem;
+    }
+    &__signal {
+      font-size: 1.5rem;
+    }
+  }
+} 

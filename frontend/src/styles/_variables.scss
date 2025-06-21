@@ -1,0 +1,31 @@
+// Font sizes
+$font-size-sm: 0.875rem; // 14px
+$font-size-md: 1rem; // 16px
+$font-size-lg: 1.25rem; // 20px
+$font-size-xl: 1.5rem; // 24px
+$font-size-xxl: 2rem; // 32px
+
+// Spacing
+$spacing-xs: 0.25rem; // 4px
+$spacing-sm: 0.5rem; // 8px
+$spacing-md: 1rem; // 16px
+$spacing-lg: 1.5rem; // 24px
+$spacing-xl: 2rem; // 32px
+$spacing-xxl: 3rem; // 48px
+
+// Borders
+$border-radius: 8px;
+
+// Colors - will be defined in themes
+$primary-color: null;
+$background-color: null;
+$text-color: null;
+$text-color-secondary: null;
+$card-background: null;
+$border-color: null;
+
+// Specific colors that don't change with theme
+$color-green: #2ecc71;
+$color-red: #e74c3c;
+$color-yellow: #f1c40f;
+$color-blue: #3498db; 
