@@ -4,8 +4,7 @@ def simulate_trading(
         df: pd.DataFrame, 
         model, 
         initial_capital=10000.0, 
-        trade_quantity=100, 
-        commission_rate=0.001, 
+        trade_quantity=100,
         prediction_horizon=10
     ) -> pd.DataFrame:
     
@@ -25,8 +24,8 @@ def simulate_trading(
         if position == -1 and i - entry_index >= prediction_horizon:
             exit_price = row["close"]
             profit_loss = (entry_price - exit_price) * trade_quantity
-            exit_commission = exit_price * trade_quantity * commission_rate
-            capital += profit_loss - exit_commission
+            # exit_commission = exit_price * trade_quantity * commission_rate
+            capital += profit_loss
             operations += 1
             position = 0
             entry_price = 0
@@ -34,8 +33,8 @@ def simulate_trading(
 
         if position == 0 and row["prediction"] == 0:
             entry_price = row["close"]
-            entry_commission = entry_price * trade_quantity * commission_rate
-            capital -= entry_commission
+            # entry_commission = entry_price * trade_quantity * commission_rate
+            # capital -= entry_commission
             position = -1
             entry_index = i
 

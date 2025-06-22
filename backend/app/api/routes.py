@@ -19,6 +19,7 @@ async def stream_prices(websocket: WebSocket):
         df = pd.read_parquet('model\clean\train_data_ml_binary.parquet')
         model = joblib.load('model\models\xgb_model.joblib')
     except FileNotFoundError as e:
+        print(e)
         await websocket.close(code=1003)
         return
 
@@ -39,7 +40,7 @@ async def stream_prices(websocket: WebSocket):
             )
             print(payload.dict())
             await websocket.send_json(payload.dict())
-            await asyncio.sleep(3)
+            await asyncio.sleep(0.5)
     except WebSocketDisconnect:
         print("WebSocket disconnected.")
     except Exception as e:

@@ -39,6 +39,8 @@ const Dashboard: React.FC = () => {
   const midPrice = latestPrice ? ((latestPrice.bid + latestPrice.ask) / 2).toFixed(2) : '--';
   const signal = latestPrice ? (latestPrice.will_go_up === 1 ? 'BUY' : 'SELL') : '--';
   const signalArrow = latestPrice ? (latestPrice.will_go_up === 1 ? '↑' : '↓') : '';
+  const profitsValue = latestPrice?.earnings ? latestPrice.earnings - 10000: undefined;
+  const profitsColorClass = profitsValue !== undefined ? (profitsValue >= 0 ? 'positive' : 'negative') : '';
 
   return (
     <div className="dashboard">
@@ -79,16 +81,22 @@ const Dashboard: React.FC = () => {
         </section>
         <section className="dashboard__summary-panels">
           <div className="dashboard__summary">
-            <div className="dashboard__summary-label">Profits</div>
+            <div className="dashboard__summary-label">Capital</div>
             <div className="dashboard__summary-value profits">{formatCurrency(latestPrice?.earnings)}</div>
           </div>
           <div className="dashboard__summary">
-            <div className="dashboard__summary-label">Operaciones</div>
-            <div className="dashboard__summary-value operations">{latestPrice?.operations ?? '--'}</div>
+            <div className="dashboard__summary-label">Profits</div>
+            <div className={`dashboard__summary-value profits ${profitsColorClass}`}>{formatCurrency(profitsValue)}</div>
           </div>
-          <div className="dashboard__summary">
-            <div className="dashboard__summary-label">Tasa de Acierto</div>
-            <div className="dashboard__summary-value accuracy">{formatPercentage(latestPrice?.accuracy)}</div>
+          <div className="dashboard__summary dashboard__summary--horizontal">
+            <div>
+              <div className="dashboard__summary-label">Operaciones</div>
+              <div className="dashboard__summary-value operations">{latestPrice?.operations ?? '--'}</div>
+            </div>
+            <div>
+              <div className="dashboard__summary-label">Tasa de Acierto</div>
+              <div className="dashboard__summary-value accuracy">{formatPercentage(latestPrice?.accuracy)}</div>
+            </div>
           </div>
           <div className="dashboard__summary">
              <div className={`dashboard__signal ${signal.toLowerCase()}`}>{signal} {signalArrow}</div>
