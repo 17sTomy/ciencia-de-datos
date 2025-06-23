@@ -1,98 +1,111 @@
-# README
 
 ## Introducción
 
-Este proyecto implementa un flujo completo de **lectura**, **procesado**, **modelado** y **evaluación** de datos NBBO (National Best Bid and Offer) para predecir el **mid-price** de un instrumento financiero (“SYMBOL = A”) un minuto en el futuro. El objetivo final es aplicar esta predicción en estrategias de **market making**, permitiendo colocar órdenes de forma dinámica y optimizar la captura de spread.
+Este proyecto implementa un flujo completo de procesamiento, modelado y evaluación de datos NBBO (National Best Bid and Offer) para **predecir la dirección futura del precio de un instrumento financiero (Sube/Baja)**. El objetivo es determinar si el **precio de cierre** de un activo (`SYMBOL = A`) aumentará o disminuirá significativamente en los próximos **10 minutos**. Esta predicción se puede aplicar en estrategias de trading cuantitativas, como el **market making**, para optimizar la colocación de órdenes y la captura de `spread`.
 
 ---
 
 ## ¿Qué es Market Making?
 
-El **market making** es una estrategia de trading en la que un participante (el "market maker") provee **liquidez** al mercado colocando simultáneamente órdenes de compra (bids) y órdenes de venta (asks) sobre un instrumento financiero. Al ofrecer siempre precios en ambos lados del libro de órdenes, el market maker busca capturar la diferencia (el *spread*) entre el precio al que compra y el precio al que vende.
+El market making es una estrategia de trading donde un participante (el "market maker") provee liquidez al mercado. Lo hace colocando simultáneamente órdenes de compra (`bids`) y órdenes de venta (`asks`) para un instrumento financiero. Al ofrecer precios en ambos lados del libro de órdenes, el market maker busca capturar la diferencia (el `spread`) entre el precio al que compra y el precio al que vende.
 
-* **Spread**: es la diferencia entre el mejor precio de venta (`BO`, Best Offer) y el mejor precio de compra (`BB`, Best Bid).
-* **Mid-price**: punto medio entre `BB` y `BO`, calculado como `(BB + BO) / 2`.
-* **BBSize / BOSize**: volumen disponible en ese nivel de best bid u offer.
+* **`Spread`**: Es la diferencia entre el mejor precio de venta (`Ask`, antes `BO`) y el mejor precio de compra (`Bid`, antes `BB`).
+* **`Mid-price`**: Punto medio entre `Bid` y `Ask`, calculado como `(Bid + Ask) / 2`.
+* **`BidQty` / `AskQty`**: Volumen disponible en el nivel del mejor precio de compra o venta, respectivamente (antes `BBSize`/`BOSize`).
 
-El market maker gana pequeñas fracciones cada vez que sus órdenes cruzan en el mercado, acumulando beneficios por la repetición de estas operaciones.
+El market maker obtiene pequeñas ganancias cada vez que sus órdenes son ejecutadas, acumulando beneficios a través de la repetición de estas operaciones.
 
 ---
 
 ## Estructura del Modelo
 
-1. **Carga de datos**: Se lee un archivo SAS (`.sas7bdat`) con registros tick-a-tick de NBBO.
-2. **Construcción del índice temporal**:
+### 1. Carga y Re-muestreo de Datos
 
-   * Convierte `DATE` (fecha) a tipo `datetime64`.
-   * Transforma `TIME` (segundos desde medianoche) a un `timedelta`.
-   * Combina fecha y hora para fijar un índice `datetime` sobre el DataFrame.
-3. **Filtrado de instrumento**: Solo se procesan los ticks cuyo campo `SYMBOL` coincide con el activo de interés (por ejemplo, “A”).
-4. **Resampleo**: Agrupa los ticks cada 60 segundos y calcula estadísticas dentro de cada ventana:
+* **Carga de datos**: Se lee un archivo Parquet (`all_data.parquet`) que contiene registros `tick-a-tick` de NBBO.
+* **Filtrado de instrumento**: Solo se procesan los ticks cuyo campo `SYMBOL` coincide con el activo de interés (`"A"`).
+* **Renombrado de columnas**: Se ajustan los nombres de las columnas a `Bid`, `Ask`, `BidQty`, `AskQty`.
+* **Construcción del índice temporal**:
+    * `TIME` (segundos desde medianoche) se convierte a un `timedelta`.
+    * Se combina `DATE` y el `timedelta` para crear un índice `datetime` sobre el DataFrame.
+* **Re-muestreo**: Los ticks se agrupan cada **60 segundos** (`1min`), y se calculan las siguientes estadísticas dentro de cada ventana:
+    * `Bid`, `Ask`: `first`, `max`, `min`, `last` (primer, máximo, mínimo y último precio).
+    * `BidQty`, `AskQty`: `sum` (volumen total).
+    * `NUMEX`: `mean`.
 
-   * `mid`: último mid-price (`(BB + BO)/2`).
-   * `BBSize`, `BOSize`: volúmenes totales (`sum`).
-   * `BB`, `BO`: precios medios (`mean`).
-5. **Feature engineering**:
+### 2. Ingeniería de Características
 
-   * **spread** = `BO - BB`.
-   * **imbalance** = `(BBSize - BOSize)/(BBSize + BOSize)`.
-   * **mid\_future**: target, mid-price un minuto adelante (`mid.shift(-1)`).
-6. **Split train/test**: 80% de las ventanas para entrenamiento, 20% para prueba, manteniendo orden temporal.
-7. **Modelado**:
+Se calculan nuevas variables (features) a partir de los datos re-muestreados para mejorar la capacidad predictiva del modelo:
 
-   * Pipeline: `StandardScaler` + `RandomForestRegressor(n_estimators=100)`.
-   * Entrenamiento y predicción.
-8. **Evaluación**:
+* **`open`, `high`, `low`, `close`**: Precios de apertura, máximo, mínimo y cierre de la vela de 1 minuto, calculados a partir de los `Bid`/`Ask` correspondientes.
+* **`spread`**: `Ask_last - Bid_last`.
+* **`imbalance`**: `(BidQty_sum - AskQty_sum) / (BidQty_sum + AskQty_sum)`. Mide la presión de compra/venta.
+* **`volume`**: `BidQty_sum + AskQty_sum`. Volumen total transado en la ventana.
+* **Medias Móviles (`rolling means`)**: Para `imbalance` y `volume` en ventanas de **5, 10 y 30 minutos** (ej. `imbalance_ma_5`).
+* **Volatilidad (`rolling std`)**: Desviación estándar del precio de cierre (`close`) en ventanas de **5, 10 y 30 minutos** (ej. `volatility_5`).
 
-   * **MSE**, **RMSE**, **MAE**, **MAPE**, **R²**.
-   * Predicción en tiempo real para la última ventana.
+### 3. Creación del Target BINARIO
+
+El objetivo del modelo es clasificar si el precio de cierre subirá o bajará significativamente en el futuro:
+
+* **Horizonte de Predicción**: Se define `prediction_horizon = 10` minutos. Esto significa que el `target` se basará en el `close` 10 minutos más tarde.
+* **`close_future`**: El precio de cierre del activo 10 minutos adelante (`close.shift(-10)`).
+* **`target_price_change`**: La diferencia entre el `close_future` y el `close` actual.
+* **Umbral (`threshold`)**: Se establece un `threshold` (por ejemplo, `0.01`) para definir un movimiento significativo:
+    * Si `target_price_change > threshold`: `target_direction = 1` (Sube).
+    * Si `target_price_change < -threshold`: `target_direction = 0` (Baja).
+    * Si `abs(target_price_change) <= threshold`: Se marcan como `NaN` para ser eliminados, ya que no representan un movimiento "claro" hacia arriba o hacia abajo.
+
+### 4. División de Datos y Modelado
+
+* **Limpieza Final**: Se eliminan las filas con valores `NaN` (incluyendo las ventanas con `target_direction` indefinido y los `NaN` generados por las medias móviles).
+* **`Split` Train/Test**: Los datos se dividen en un conjunto de entrenamiento (80%) y un conjunto de prueba (20%), **manteniendo el orden temporal** (`shuffle=False`).
+* **Modelo**: Se utiliza **XGBoost (Extreme Gradient Boosting)**, un potente algoritmo de clasificación basado en árboles de decisión.
+* **`GridSearchCV` para Series Temporales**:
+    * Se emplea `TimeSeriesSplit` para una validación cruzada adecuada para datos secuenciales, evitando la fuga de información futura.
+    * Se optimizan hiperparámetros clave del modelo XGBoost (`max_depth`, `learning_rate`, `n_estimators`, `colsample_bytree`) usando `GridSearchCV` para encontrar la mejor combinación.
+    * Se calcula `scale_pos_weight` para manejar el desbalance de clases si lo hubiera (más "sube" que "baja" o viceversa).
+    * La métrica de optimización es **ROC AUC (`roc_auc_score`)**, que es robusta para problemas de clasificación binaria, especialmente con desbalance de clases.
+* **Entrenamiento y Predicción**: El mejor modelo encontrado por `GridSearchCV` se entrena y luego se utiliza para predecir la dirección en el conjunto de prueba.
+
+---
+
+### 5. Evaluación
+
+La evaluación del modelo se realiza sobre el conjunto de prueba (`X_test`, `y_test`), utilizando métricas para clasificación binaria:
+
+* **`Accuracy`**: Proporción de predicciones correctas.
+* **`ROC AUC Score`**: Mide la capacidad del modelo para distinguir entre las clases positivas y negativas. Un valor más cercano a 1 indica mejor rendimiento.
+* **`Classification Report`**: Proporciona `precision`, `recall` y `f1-score` para ambas clases (`Baja (0)` y `Sube (1)`).
+
+---
+
+### 6. Guardado del Modelo
+
+El modelo XGBoost optimizado se guarda utilizando `joblib` para su posterior uso en inferencia o despliegue.
 
 ---
 
 ## Resultados Principales
 
-* **MSE**: Error cuadrático medio.
-* **RMSE**: \~0.21 (error en unidades de precio).
-* **MAE**: \~0.13 (error absoluto medio).
-* **MAPE**: \~0.22% (error porcentual medio).
-* **R²**: \~0.71 (explica el 71% de la varianza).
+Los resultados se basan en la evaluación del modelo XGBoost optimizado en el conjunto de prueba:
 
-Estos resultados indican que el modelo predice con alta fidelidad el mid-price a un minuto, con desviaciones típicas muy pequeñas respecto al precio real.
+* **`Accuracy`**: [0.3772]
+* **`ROC AUC Score`**: [0.7466]
 
----
+El **Reporte de Clasificación** detallará la `precisión`, `recall` y `f1-score` para cada clase, lo que ayuda a entender el rendimiento del modelo para predecir movimientos de precio al alza (Sube) o a la baja (Baja).
 
-## Uso en Market Making
-
-1. **Generación de señales**: Cada minuto, a partir de las features del intervalo actual, el modelo predice `mid_next`. Comparando con `mid_actual`:
-
-   * Si `mid_next > mid_actual * (1 + ε)`: señal **BUY**.
-   * Si `mid_next < mid_actual * (1 - ε)`: señal **SELL**.
-   * En otro caso, **HOLD**.
-
-2. **Colocación de órdenes**:
-
-   * Se despliegan **órdenes limitadas** de compra en `(mid_next - spread/2)` y de venta en `(mid_next + spread/2)`.
-   * El **size** (`BBSize`/`BOSize`) indica cuánto volumen se puede colocar sin mover demasiado el precio; se suelen usar fracciones (10–30%) para minimizar impacto.
-
-### Ejemplo de uso práctico
-
-* El modelo te dice: “este minuto el mid está en 50.00; al siguiente minuto lo veo en 50.20”.
-* Con esa señal, envías **órdenes limitadas** de compra/venda alrededor de `mid_pred`, capturando el spread cuando tus órdenes sean ejecutadas.
-* El **size** te guía para dimensionar tu orden: no metes todo tu capital, sino un porcentaje del volumen disponible.
-* No se trata de “comprar todo y vender todo cada minuto”, sino de diseñar reglas de entrada/salida, límites de órdenes, gestión de riesgo y frecuencia de trading según tus costos y tolerancia al riesgo.
-
-3. **Backtest y métricas**:
-
-   * Simula tu estrategia aplicando las señales sobre datos históricos (`df_eval`).
-   * Mide P\&L, tasa de aciertos, ratio de Sharpe y drawdown.
+Estos resultados indican la capacidad del modelo para clasificar correctamente la dirección futura del precio con un buen balance entre falsos positivos y falsos negativos, lo cual es crucial para la toma de decisiones en trading.
 
 ---
 
-## Cómo ejecutar
+## Uso en Market Making (Clasificación Binaria)
 
-1. Instalar dependencias:
-```
-pip install -r requirements.txt
-```
+A diferencia de predecir un `mid-price` exacto, este modelo genera una señal direccional:
 
-2. Ejecutar el notebook para entrenar y obtener predicciones
+* **Generación de señales**: Cada minuto (o al final de cada ventana de 1 minuto), el modelo predice la `target_direction` (Sube o Baja) para los próximos 10 minutos.
+    * Si el modelo predice `1` (**Sube**): Señal `BUY` o `LONG`.
+    * Si el modelo predice `0` (**Baja**): Señal `SELL` o `SHORT`.
+* **Colocación de órdenes**:
+    * **Señal `BUY`**: Un market maker podría sesgar su libro de órdenes colocando más volumen del lado de la `compra` o ajustando sus precios para estar más agresivo en la `compra`, esperando que el precio suba.
+    * **Señal `SELL`**: Un market maker podría sesgar su libro de órdenes colocando más volumen del lado de la `venta` o ajustando sus precios para estar más agresivo en la `venta`, esperando que el precio baje.
+    * El **`size`** (`BidQty`/`AskQty`) sigue siendo relevante para dimensionar las órdenes sin impactar significativamente el mercado.
