@@ -2,8 +2,6 @@ import pandas as pd
 import os
 
 # --- 1. Conversión y Unificación en un solo paso eficiente ---
-
-
 FILES = [] 
 FINAL_PARQUET_PATH = "model/filter/all_data.parquet"
 
