@@ -4,9 +4,9 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import pandas as pd
 from app.services.trading import simulate_trading
 from app.schemas.schemas import PricePredictionResponse
-
+  
 router = APIRouter()
-
+  
 @router.get("/ping")
 def ping():
     return {"message": "pong"}
@@ -16,7 +16,7 @@ async def stream_prices(websocket: WebSocket):
     print("Connected")
     await websocket.accept()
     try:
-        df = pd.read_parquet('model\clean\train_data_ml_binary.parquet')
+        df = pd.read_parquet('model\clean\data.parquet')
         model = joblib.load('model\models\xgb_model.joblib')
     except FileNotFoundError as e:
         print(e)
@@ -45,3 +45,5 @@ async def stream_prices(websocket: WebSocket):
         print("WebSocket disconnected.")
     except Exception as e:
         await websocket.send_json({"type": "error", "message": str(e)})
+
+        
