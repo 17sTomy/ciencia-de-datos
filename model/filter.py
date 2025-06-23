@@ -4,7 +4,7 @@ import os
 # --- 1. Conversión y Unificación en un solo paso eficiente ---
 
 
-FILES = ["data_20140131.sas7bdat", "data_20140130.sas7bdat"] 
+FILES = [] 
 FINAL_PARQUET_PATH = "model/filter/all_data.parquet"
 
 # Eliminamos el archivo final si ya existe para empezar de cero
